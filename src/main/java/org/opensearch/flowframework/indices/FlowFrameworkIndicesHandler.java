@@ -500,22 +500,19 @@ public class FlowFrameworkIndicesHandler {
         String resourceId,
         ActionListener<UpdateResponse> listener
     ) throws IOException {
-        ResourceCreated newResource = new ResourceCreated(
-            workflowStepName,
-            nodeId,
-            getResourceByWorkflowStep(workflowStepName),
-            resourceId
-        );
-        XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
-        newResource.toXContent(builder, ToXContent.EMPTY_PARAMS);
+        ResourceCreated newResource =
+            new ResourceCreated(workflowStepName, nodeId, getResourceByWorkflowStep(workflowStepName), resourceId);
 
         // The script to append a new object to the resources_created array
-        Script script = new Script(
-            ScriptType.INLINE,
-            "painless",
-            "ctx._source.resources_created.add(params.newResource)",
-            Collections.singletonMap("newResource", newResource)
-        );
+        Script script = new Script(ScriptType.INLINE, "painless", "ctx._source.resources_created.add(params)", Map.of("resource_id",
+            newResource.resourceId(),
+            "resource_type",
+            newResource.resourceType(),
+            "workflow_step_id",
+            newResource.workflowStepId(),
+            "workflow_step_name",
+            newResource.workflowStepName()
+        ));
 
         updateFlowFrameworkSystemIndexDocWithScript(WORKFLOW_STATE_INDEX, workflowId, script, ActionListener.wrap(updateResponse -> {
             logger.info("updated resources created of {}", workflowId);
